@@ -6,6 +6,16 @@
 
 Порты снаружи открыты: 80 и 443 (иначе Let’s Encrypt не выдаст сертификат).
 
+```На сервере
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+```У себя на пк-проверка
+Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 80
+Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 443
+```
+
 Сервер — Ubuntu 20.04+/22.04+/24.04 (скрипт под apt).
 
 Вход по SSH под пользователем с sudo.
