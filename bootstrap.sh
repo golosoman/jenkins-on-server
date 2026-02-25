@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 
 # Быстрый разворот Jenkins + Nginx + Let's Encrypt на Ubuntu
@@ -50,7 +49,9 @@ echo \
 apt-get update -y
 apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-systemctl enable --now docker
+systemctl enable --now docker.socket
+systemctl reset-failed docker.service || true
+docker info >/dev/null
 
 echo "[3/8] Установка Nginx"
 apt-get install -y nginx
