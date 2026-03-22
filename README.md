@@ -45,7 +45,7 @@ Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 443
 ```yaml
 services:
     jenkins:
-        image: jenkins/jenkins:lts
+        build: ./jenkins-image
         container_name: jenkins
         restart: unless-stopped
         user: "0:0"
@@ -54,12 +54,14 @@ services:
             - "127.0.0.1:50000:50000"
         volumes:
             - jenkins_home:/var/jenkins_home
+            - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
     jenkins_home:
 ```
 
 Jenkins слушает только localhost --- наружу порт 8080 не открыт.
+Папка `jenkins-image/` нужна для сборки кастомного образа Jenkins с Docker CLI и Compose plugin.
 
 ---
 
@@ -137,3 +139,12 @@ docker info
 - Порт 8080 не открыт наружу
 - Доступ только через HTTPS
 - Минимальная конфигурация без лишних плагинов
+
+## Пару полезных команд
+
+- docker stop $(docker ps -aq)
+- docker rm $(docker ps -aq)
+- docker rmi -f $(docker images -aq)
+sudo mkdir -p /opt/apps
+sudo chown -R root:root /opt/apps
+sudo git clone https://github.com/golosoman/ssau-schedule-bot /opt/apps/ssau-schedule-bot

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Быстрый разворот Jenkins + Nginx + Let's Encrypt на Ubuntu
@@ -38,7 +39,7 @@ apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https
 echo "[2/8] Установка Docker Engine (официальный репозиторий Docker)"
 # По официальной схеме установки Docker на Ubuntu: ключ + repo + docker-ce :contentReference[oaicite:6]{index=6}
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 chmod a+r /etc/apt/keyrings/docker.gpg
 
 UBUNTU_CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
@@ -60,8 +61,10 @@ systemctl enable --now nginx
 echo "[4/8] Разворачиваем Jenkins (docker compose) в ${APP_DIR}"
 mkdir -p "${APP_DIR}"
 cp -f "${REPO_DIR}/docker-compose.yml" "${APP_DIR}/docker-compose.yml"
+mkdir -p "${APP_DIR}/jenkins-image"
+cp -a "${REPO_DIR}/jenkins-image/." "${APP_DIR}/jenkins-image/"
 cd "${APP_DIR}"
-docker compose up -d
+docker compose up -d --build
 
 echo "[5/8] Настраиваем Nginx site для Jenkins (HTTP)"
 NGINX_AVAIL="/etc/nginx/sites-available/jenkins.conf"
