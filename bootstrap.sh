@@ -104,7 +104,25 @@ echo "[7/8] Финальные настройки: Jenkins URL под прокс
 echo "Jenkins будет доступен по: https://${DOMAIN}"
 echo "В Jenkins: Manage Jenkins -> System -> Jenkins Location -> Jenkins URL = https://${DOMAIN}/"
 
-echo "[8/8] Выводим initialAdminPassword"
-docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword || true
+echo "[8/8] Выводим initialAdminPassword (если это первый запуск)"
+JENKINS_PASS_FILE="/var/jenkins_home/secrets/initialAdminPassword"
+JENKINS_PASS_WAIT_SECONDS=180
+
+echo "Проверяем наличие ${JENKINS_PASS_FILE} в контейнере Jenkins..."
+for ((i=0; i<JENKINS_PASS_WAIT_SECONDS; i+=3)); do
+  if docker exec jenkins test -f "${JENKINS_PASS_FILE}" 2>/dev/null; then
+    break
+  fi
+  sleep 3
+done
+
+if docker exec jenkins test -f "${JENKINS_PASS_FILE}" 2>/dev/null; then
+  docker exec jenkins cat "${JENKINS_PASS_FILE}"
+else
+  echo "initialAdminPassword не найден."
+  echo "Возможные причины:"
+  echo "1) Jenkins уже был инициализирован ранее (старый volume jenkins_home)."
+  echo "2) Jenkins ещё запускается. Проверьте логи: docker logs --tail 200 jenkins"
+fi
 
 echo "DONE."
