@@ -55,11 +55,10 @@ services:
             - "127.0.0.1:18080:8080"
         mem_limit: 768m
         environment:
-            # JENKINS_JAVA_OPTS — основной/документированный ключ; JAVA_OPTS —
-            # дубль того же значения, т.к. entrypoint образа jenkins/jenkins:lts
-            # читает именно JAVA_OPTS. mem_limit выше — жёсткий потолок памяти.
+            # Только JENKINS_JAVA_OPTS — его читает entrypoint образа jenkins/jenkins.
+            # JAVA_OPTS не задаём: его могут подхватывать другие JVM-инструменты
+            # в сборках. mem_limit выше — жёсткий потолок памяти.
             - JENKINS_JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
-            - JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
         volumes:
             - jenkins_home:/var/jenkins_home
             - /var/run/docker.sock:/var/run/docker.sock

@@ -19,16 +19,12 @@ services:
         # default (non-swarm) `docker compose up` flow.
         mem_limit: 768m
         environment:
-            # Heap caps + setup wizard for the controller JVM.
-            #
-            # The base image (jenkins/jenkins:lts) entrypoint runs
-            #     java $JAVA_OPTS -jar jenkins.war
-            # i.e. it reads JAVA_OPTS, not JENKINS_JAVA_OPTS. We set
-            # JENKINS_JAVA_OPTS as the intended/documented knob AND mirror the
-            # same value into JAVA_OPTS so the limits actually take effect on this
-            # image. mem_limit above is the hard ceiling regardless of JVM flags.
+            # Controller JVM: heap caps + setup wizard. Use the Jenkins-specific
+            # JENKINS_JAVA_OPTS (read by the jenkins/jenkins entrypoint, which
+            # appends it to the java args) rather than JAVA_OPTS — the latter can
+            # also be picked up by other JVM tools invoked during builds.
+            # mem_limit above is the hard memory ceiling regardless of JVM flags.
             - JENKINS_JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
-            - JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
         volumes:
             - jenkins_home:/var/jenkins_home
             - /var/run/docker.sock:/var/run/docker.sock
