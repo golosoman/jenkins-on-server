@@ -49,9 +49,17 @@ services:
         container_name: jenkins
         restart: unless-stopped
         user: "0:0"
+        # Web публикуется на host ТОЛЬКО на loopback: 127.0.0.1:18080 -> 8080.
+        # Порт 50000 (inbound agents) не публикуется — в проекте не используется.
         ports:
-            - "127.0.0.1:8080:8080"
-            - "127.0.0.1:50000:50000"
+            - "127.0.0.1:18080:8080"
+        mem_limit: 768m
+        environment:
+            # JENKINS_JAVA_OPTS — основной/документированный ключ; JAVA_OPTS —
+            # дубль того же значения, т.к. entrypoint образа jenkins/jenkins:lts
+            # читает именно JAVA_OPTS. mem_limit выше — жёсткий потолок памяти.
+            - JENKINS_JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
+            - JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
         volumes:
             - jenkins_home:/var/jenkins_home
             - /var/run/docker.sock:/var/run/docker.sock
@@ -60,7 +68,12 @@ volumes:
     jenkins_home:
 ```
 
-Jenkins слушает только localhost --- наружу порт 8080 не открыт.
+Web Jenkins публикуется на host как `127.0.0.1:18080` (только loopback) и
+наружу напрямую не открыт; порт `8080` остаётся внутренним портом контейнера.
+`18080` **не предназначен для публичного доступа** — внешний доступ идёт через
+reverse proxy. Порт `50000` (inbound agents) не публикуется, т.к. не используется;
+если он понадобится, публиковать его нужно только локально как
+`127.0.0.1:15000:50000`.
 Папка `jenkins-image/` нужна для сборки кастомного образа Jenkins с Docker CLI и Compose plugin.
 
 ---
@@ -73,7 +86,7 @@ server {
     server_name ${DOMAIN};
 
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:18080;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -136,8 +149,14 @@ docker info
 
 ## Безопасность
 
-- Порт 8080 не открыт наружу
+- Web Jenkins публикуется на host только на loopback `127.0.0.1:18080`
+  (наружу `0.0.0.0` не биндится); `8080` — внутренний порт контейнера
+- Порт `18080` не для публичного доступа — внешний доступ только через reverse proxy
+- Порт `50000` (inbound agents) не публикуется (не используется); при необходимости
+  — только локально `127.0.0.1:15000:50000`
 - Доступ только через HTTPS
+- JVM controller ограничена (`-Xms256m -Xmx512m`), память контейнера — `mem_limit: 768m`
+- Для слабых серверов: не запускать тяжёлые и параллельные сборки
 - Минимальная конфигурация без лишних плагинов
 
 ## Пару полезных команд

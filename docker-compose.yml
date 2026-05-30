@@ -4,9 +4,31 @@ services:
         container_name: jenkins
         restart: unless-stopped
         user: "0:0"
+        # Jenkins web -> host loopback ONLY (127.0.0.1:18080 -> container 8080).
+        # The container still listens on 8080 internally; it must never be bound
+        # on 0.0.0.0. Public access goes through the host reverse proxy (nginx),
+        # never through this port directly.
+        #
+        # Inbound agent port 50000 is intentionally NOT published: this project
+        # defines no inbound JNLP agents (no Jenkinsfile/agent config that needs
+        # it). If you ever add inbound agents, publish them locally only:
+        #     - "127.0.0.1:15000:50000"
         ports:
-            - "127.0.0.1:8080:8080"
-            - "127.0.0.1:50000:50000"
+            - "127.0.0.1:18080:8080"
+        # Hard container memory ceiling. Honored by Docker Compose v2 in the
+        # default (non-swarm) `docker compose up` flow.
+        mem_limit: 768m
+        environment:
+            # Heap caps + setup wizard for the controller JVM.
+            #
+            # The base image (jenkins/jenkins:lts) entrypoint runs
+            #     java $JAVA_OPTS -jar jenkins.war
+            # i.e. it reads JAVA_OPTS, not JENKINS_JAVA_OPTS. We set
+            # JENKINS_JAVA_OPTS as the intended/documented knob AND mirror the
+            # same value into JAVA_OPTS so the limits actually take effect on this
+            # image. mem_limit above is the hard ceiling regardless of JVM flags.
+            - JENKINS_JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
+            - JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
         volumes:
             - jenkins_home:/var/jenkins_home
             - /var/run/docker.sock:/var/run/docker.sock
