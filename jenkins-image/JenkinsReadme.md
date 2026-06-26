@@ -6,13 +6,13 @@
 - Nginx работает как reverse-proxy и публикует Jenkins наружу по HTTPS
 - Сертификат Let’s Encrypt выпущен и настроено автопродление
 
-Если Jenkins доступен по `https://<DOMAIN>` — базовая часть готова.
+Если Jenkins доступен по `https://<DOMAIN>:8443` — базовая часть готова.
 
 ---
 
 ## 2) Первичная настройка Jenkins (обязательно сделать 1 раз)
 
-1) Открой Jenkins в браузере: `https://<DOMAIN>`
+1) Открой Jenkins в браузере: `https://<DOMAIN>:8443`
 2) Вставь **initialAdminPassword** (скрипт выводил его в конце; также можно получить так):
    ```bash
    docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword
@@ -21,7 +21,7 @@
 4) Создай admin-пользователя
 5) Проверь базовую настройку URL:
    - `Manage Jenkins → System → Jenkins Location → Jenkins URL`
-   - Должно быть: `https://<DOMAIN>/`
+   - Должно быть: `https://<DOMAIN>:8443/`
 
 > Важно: при работе за reverse-proxy Jenkins чувствителен к корректным заголовкам. Для HTTPS→HTTP проксирования нужно, чтобы прокси передавал `X-Forwarded-Proto`.
 
@@ -91,10 +91,11 @@ GitHub webhooks — это механизм, когда GitHub отправля�
 Для Jenkins GitHub интеграции обычно используется endpoint:
 
 ```
-https://<DOMAIN>/github-webhook/
+https://<DOMAIN>:8443/github-webhook/
 ```
 
-**Важно:** слеш в конце (`/`) лучше оставлять.
+**Важно:** слеш в конце (`/`) лучше оставлять. Порт `:8443` обязателен —
+Jenkins опубликован именно на нём (на `443` другой сайт).
 
 ### 5.2 Пошагово в интерфейсе GitHub
 
@@ -104,7 +105,7 @@ https://<DOMAIN>/github-webhook/
 4) Нажми `Add webhook`.
 5) Заполни поля:
 
-- **Payload URL**: `https://<DOMAIN>/github-webhook/`
+- **Payload URL**: `https://<DOMAIN>:8443/github-webhook/`
 - **Content type**: `application/json`
 - **Secret**: задай случайную строку (рекомендуется)
 - **Which events would you like to trigger this webhook?**
@@ -128,7 +129,7 @@ https://<DOMAIN>/github-webhook/
 Ожидаемый поток:
 
 1) Ты делаешь `git push` в репозиторий (например в `main`)
-2) GitHub отправляет webhook на `https://<DOMAIN>/github-webhook/`
+2) GitHub отправляет webhook на `https://<DOMAIN>:8443/github-webhook/`
 3) Jenkins (Multibranch) получает событие и:
    - либо запускает build сразу
    - либо инициирует rescan веток и затем запускает build
@@ -140,7 +141,7 @@ https://<DOMAIN>/github-webhook/
 ### 7.1 Webhook в GitHub показывает timeout
 Почти всегда:
 - домен не указывает на сервер
-- закрыт порт 443/80 на уровне провайдера
+- закрыт порт 8443/80 на уровне провайдера
 - reverse-proxy неправильно настроен
 
 ### 7.2 Jenkins ругается на reverse proxy (“reverse proxy setup is broken”)

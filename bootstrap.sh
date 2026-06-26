@@ -92,17 +92,25 @@ snap install certbot --classic
 ln -sf /snap/bin/certbot /usr/bin/certbot
 
 # Важно: порт 80 должен быть доступен снаружи, иначе валидация не пройдёт.
+# HTTP-01 challenge всегда идёт по порту 80 (этого требует ACME), даже когда
+# HTTPS вынесен на нестандартный порт.
+#
+# --https-port 8443: 443 занят другим сайтом на этом сервере, поэтому Jenkins
+# публикуется по HTTPS на 8443. Этот флаг заставляет certbot сконфигурировать
+# nginx на listen 8443 ssl (вместо 443) и направить HTTP->HTTPS редирект на 8443.
+HTTPS_PORT="8443"
 certbot --nginx \
   -d "${DOMAIN}" \
   --non-interactive \
   --agree-tos \
   -m "${EMAIL}" \
+  --https-port "${HTTPS_PORT}" \
   --redirect
 
 echo "[7/8] Финальные настройки: Jenkins URL под прокси"
 # Автоматом через UI проще, но можно хотя бы подсказать где:
-echo "Jenkins будет доступен по: https://${DOMAIN}"
-echo "В Jenkins: Manage Jenkins -> System -> Jenkins Location -> Jenkins URL = https://${DOMAIN}/"
+echo "Jenkins будет доступен по: https://${DOMAIN}:${HTTPS_PORT}"
+echo "В Jenkins: Manage Jenkins -> System -> Jenkins Location -> Jenkins URL = https://${DOMAIN}:${HTTPS_PORT}/"
 
 echo "[8/8] Выводим initialAdminPassword (если это первый запуск)"
 JENKINS_PASS_FILE="/var/jenkins_home/secrets/initialAdminPassword"

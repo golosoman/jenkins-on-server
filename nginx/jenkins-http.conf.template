@@ -1,3 +1,7 @@
+# HTTP-only шаблон. Блок `listen 8443 ssl` (Jenkins публикуется по HTTPS на 8443,
+# т.к. 443 занят другим сайтом) и редирект HTTP -> HTTPS добавляет certbot при
+# деплое: `certbot --nginx --https-port 8443 --redirect` (см. bootstrap.sh).
+# Порт 80 остаётся — по нему идёт ACME-проверка и редирект на 8443.
 server {
   listen 80;
   server_name ${DOMAIN};

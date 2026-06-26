@@ -8,22 +8,26 @@ Nginx и TLS-сертификатом Let's Encrypt (Certbot).
 ## Минимальные требования
 
 - Домен (например `ci.example.com`) указывает A-записью на IP сервера
-- Открыты порты 80 и 443
+- Открыты порты 80 и 8443
 - Ubuntu 20.04 / 22.04 / 24.04
 - Доступ по SSH с sudo
+
+> Jenkins публикуется по HTTPS на нестандартном порту **8443**, т.к. `443` на
+> этом сервере занят другим сайтом. Порт `80` всё равно нужен — по нему идёт
+> ACME-проверка Let's Encrypt и редирект HTTP → HTTPS.
 
 Открыть порты:
 
 ```bash
 sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+sudo ufw allow 8443/tcp
 ```
 
 Проверка с локального ПК (Windows PowerShell):
 
 ```powershell
 Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 80
-Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 443
+Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 8443
 ```
 
 ---
@@ -95,6 +99,11 @@ server {
 }
 ```
 
+В шаблоне только `listen 80`. HTTPS-блок (`listen 8443 ssl`) и редирект
+HTTP → HTTPS добавляет Certbot во время `bootstrap.sh` командой
+`certbot --nginx --https-port 8443 --redirect`. Публичный HTTPS вынесен на
+**8443**, потому что `443` занят другим сайтом; upstream всегда `http://127.0.0.1:18080`.
+
 `X-Forwarded-Proto` обязателен при работе через HTTPS-прокси.
 
 ---
@@ -111,7 +120,7 @@ sudo bash bootstrap.sh -d ci.example.com -e admin@example.com
 
 После выполнения:
 
-- Jenkins будет доступен по https://ci.example.com
+- Jenkins будет доступен по https://ci.example.com:8443
 - В консоли будет выведен initialAdminPassword
 
 ---
@@ -153,7 +162,7 @@ docker info
 - Порт `18080` не для публичного доступа — внешний доступ только через reverse proxy
 - Порт `50000` (inbound agents) не публикуется (не используется); при необходимости
   — только локально `127.0.0.1:15000:50000`
-- Доступ только через HTTPS
+- Доступ только через HTTPS (публичный порт `8443`, т.к. `443` занят другим сайтом)
 - JVM controller ограничена (`-Xms256m -Xmx512m`), память контейнера — `mem_limit: 768m`
 - Для слабых серверов: не запускать тяжёлые и параллельные сборки
 - Минимальная конфигурация без лишних плагинов
