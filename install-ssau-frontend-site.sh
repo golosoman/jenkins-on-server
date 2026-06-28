@@ -13,6 +13,22 @@ SKIP_CERTBOT="false"
 CERT_DOMAIN=""
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+fix_certbot_https_port_redirect() {
+  # Certbot correctly creates `listen <port> ssl`, but its HTTP redirect can be
+  # rendered as `https://$host$request_uri` without the custom HTTPS port.
+  # On this server 443 is used by another service, so frontend/Jenkins sites must
+  # redirect to their explicit HTTPS ports.
+  if [[ "${HTTPS_PORT}" == "443" ]]; then
+    return 0
+  fi
+
+  if grep -q 'return 301 https://$host$request_uri;' "${NGINX_AVAIL}"; then
+    sed -i \
+      's|return 301 https://\$host\$request_uri;|return 301 https://\$host:'"${HTTPS_PORT}"'\$request_uri;|g' \
+      "${NGINX_AVAIL}"
+  fi
+}
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -126,5 +142,9 @@ certbot --nginx \
   -m "${EMAIL}" \
   --https-port "${HTTPS_PORT}" \
   --redirect
+
+fix_certbot_https_port_redirect
+nginx -t
+systemctl reload nginx
 
 echo "Frontend nginx site is ready: https://${DOMAIN}:${HTTPS_PORT}"
