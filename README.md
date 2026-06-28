@@ -1,7 +1,11 @@
-# Jenkins on Server (Docker + Nginx + Let's Encrypt)
+# CI/CD Deploy
 
-Автоматический разворот Jenkins LTS в Docker с обратным прокси через
-Nginx и TLS-сертификатом Let's Encrypt (Certbot).
+Инфраструктурный репозиторий для сервера: Jenkins в Docker, host-nginx и
+nginx-site для фронтенда `ssau-schedule-bot`.
+
+Это правильное место для nginx-конфигов. В репозитории приложения остаются
+`Jenkinsfile` и код приложения, а server-level конфиги, certbot и публикация
+портов живут здесь.
 
 ---
 
@@ -34,12 +38,16 @@ Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 8443
 
 ## Структура репозитория
 
-    jenkins-on-server/
+    ci-cd-deploy/
     │
     ├── bootstrap.sh
     ├── docker-compose.yml
+    ├── install-ssau-frontend-site.sh
     ├── nginx/
-    │   └── jenkins-http.conf.template
+    │   ├── jenkins-http.conf.template
+    │   ├── ssau-frontend-https-port.conf.template
+    │   └── ssau-frontend-http.conf.template
+    ├── jenkins-image/
     └── README.md
 
 ---
@@ -110,11 +118,13 @@ HTTP → HTTPS добавляет Certbot во время `bootstrap.sh` ком�
 
 ## Запуск
 
+### Jenkins
+
 ```bash
 sudo apt-get update -y
 sudo apt-get install -y git
-git clone https://github.com/<you>/jenkins-on-server.git
-cd jenkins-on-server
+git clone https://github.com/<you>/ci-cd-deploy.git
+cd ci-cd-deploy
 sudo bash bootstrap.sh -d ci.example.com -e admin@example.com
 ```
 
@@ -122,6 +132,61 @@ sudo bash bootstrap.sh -d ci.example.com -e admin@example.com
 
 - Jenkins будет доступен по https://ci.example.com:8443
 - В консоли будет выведен initialAdminPassword
+
+### Frontend site для ssau-schedule-bot
+
+Фронт собирается отдельной Jenkins Pipeline-джобой из
+`ssau-schedule-bot/frontend/Jenkinsfile` и публикует `dist` сюда:
+
+```text
+/opt/apps/ssau-schedule-frontend/current
+```
+
+Host-nginx должен раздавать этот каталог и проксировать `/api` на backend.
+Если у фронта отдельный домен/поддомен, можно выпустить отдельный certbot-site:
+
+```bash
+sudo bash install-ssau-frontend-site.sh \
+  -d app.example.com \
+  -e admin@example.com \
+  -p 8444
+```
+
+По умолчанию:
+
+- HTTPS frontend port: `8444`
+- frontend root: `/opt/apps/ssau-schedule-frontend/current`
+- API upstream: `http://127.0.0.1:3100`
+
+Если TLS пока не нужен или certbot уже настраивается вручную:
+
+```bash
+sudo bash install-ssau-frontend-site.sh -d app.example.com -n
+```
+
+После этого frontend будет доступен как:
+
+```text
+https://app.example.com:8444
+```
+
+Если нужен другой порт, передай его через `-p`. Для Let's Encrypt порт `80`
+всё равно должен быть открыт снаружи: HTTP-01 challenge всегда приходит на `80`.
+
+Если frontend должен жить на том же домене, что Jenkins, но на другом HTTPS-порту
+(`https://ci.example.com:8444`), не создавай второй HTTP-site с тем же
+`server_name`: nginx будет конфликтовать на `listen 80`. В этом случае
+переиспользуй уже выпущенный сертификат Jenkins:
+
+```bash
+sudo bash install-ssau-frontend-site.sh \
+  -d ci.example.com \
+  -c ci.example.com \
+  -p 8444
+```
+
+Этот режим ставит только `listen 8444 ssl` для фронта и не трогает HTTP-редирект
+Jenkins на `8443`.
 
 ---
 
