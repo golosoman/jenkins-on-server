@@ -17,14 +17,34 @@ services:
             - "127.0.0.1:18080:8080"
         # Hard container memory ceiling. Honored by Docker Compose v2 in the
         # default (non-swarm) `docker compose up` flow.
-        mem_limit: 768m
+        #
+        # 640m, а не 768m: на сервере ВСЕГО 961 МБ физической памяти, и Jenkins был
+        # крупнейшим потребителем платформы — 555 МБ (130 МБ в RAM + 425 МБ вытеснено
+        # в своп). Для сравнения: все двадцать контейнеров платформы вместе занимают
+        # ~240 МБ, то есть один CI съедал больше, чем всё, что он обслуживает.
+        # Потолок = heap 320 + metaspace 160 + native/стек ≈ 600 МБ, с запасом.
+        mem_limit: 640m
+        # Логи контейнера по умолчанию растут без предела, а диск на сервере уже был
+        # занят на 93%. Три файла по 10 МБ — потолок в 30 МБ вместо бесконечности.
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
         environment:
             # Controller JVM: heap caps + setup wizard. Use the Jenkins-specific
             # JENKINS_JAVA_OPTS (read by the jenkins/jenkins entrypoint, which
             # appends it to the java args) rather than JAVA_OPTS — the latter can
             # also be picked up by other JVM tools invoked during builds.
             # mem_limit above is the hard memory ceiling regardless of JVM flags.
-            - JENKINS_JAVA_OPTS=-Xms256m -Xmx512m -Djenkins.install.runSetupWizard=true
+            #
+            # Xmx320m вместо 512m: JVM забирает заявленный heap и держит его, даже
+            # когда сборок нет. На машине с 961 МБ это была заявка на половину всей
+            # оперативки. UseSerialGC — потому что ядро одно: параллельный сборщик
+            # мусора здесь только тратит такты на координацию потоков, которых нет.
+            # MaxMetaspaceSize ограничивает область под классы плагинов: у Jenkins
+            # она растёт с каждым плагином и по умолчанию не ограничена вовсе.
+            - JENKINS_JAVA_OPTS=-Xms128m -Xmx320m -XX:+UseSerialGC -XX:MaxMetaspaceSize=160m -Djenkins.install.runSetupWizard=true
         volumes:
             - jenkins_home:/var/jenkins_home
             - /var/run/docker.sock:/var/run/docker.sock
