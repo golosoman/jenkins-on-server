@@ -56,6 +56,8 @@ Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 8443
 ## docker-compose.yml
 
 ```yaml
+name: jenkins
+
 services:
     jenkins:
         build: ./jenkins-image
@@ -84,6 +86,11 @@ services:
 volumes:
     jenkins_home:
 ```
+
+Имя Compose-проекта закреплено как `jenkins`, поэтому Docker volume всегда
+называется `jenkins_jenkins_home` и не зависит от имени каталога, куда
+клонирован репозиторий. На чистом сервере Compose создаст volume автоматически;
+при переносе он подключит заранее восстановленный volume с тем же именем.
 
 **Про размеры памяти.** Значения выбраны по замерам с работающего сервера, а не
 на глаз. На машине 961 МБ физической памяти, и Jenkins был крупнейшим потребителем:
@@ -153,6 +160,25 @@ sudo bash bootstrap.sh -d ci.example.com -e admin@example.com
 
 - Jenkins будет доступен по https://ci.example.com:8443
 - В консоли будет выведен initialAdminPassword
+
+### Перенос существующего Jenkins
+
+Весь изменяемый state Jenkins хранится в Docker volume
+`jenkins_jenkins_home`: задания, пользователи, плагины, credentials и ключи их
+шифрования. Переносить нужно volume целиком при остановленном Jenkins.
+
+Нельзя переносить только `credentials.xml`: без файлов
+`secrets/master.key`, `secrets/hudson.util.Secret` и остальных данных из
+`secrets/` Jenkins не сможет расшифровать credentials.
+
+Перед переносом создай архив volume и его SHA-256 checksum. Архивы, содержимое
+volume и секреты нельзя добавлять в Git. После восстановления проверь как
+минимум:
+
+- Jenkins открывает `/login` без повторного Initial Setup Wizard;
+- задания и multibranch repositories присутствуют;
+- в startup-логах нет ошибок загрузки плагинов и расшифровки secrets;
+- установленная версия Jenkins совместима с восстановленными плагинами.
 
 ### Frontend site для ssau-schedule-bot
 

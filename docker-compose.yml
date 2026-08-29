@@ -1,3 +1,5 @@
+name: jenkins
+
 services:
     jenkins:
         build: ./jenkins-image
