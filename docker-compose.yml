@@ -3,6 +3,7 @@ name: jenkins
 services:
     jenkins:
         build: ./jenkins-image
+        image: jenkins-on-server-jenkins:latest
         container_name: jenkins
         restart: unless-stopped
         user: "0:0"
