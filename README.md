@@ -38,7 +38,7 @@ Test-NetConnection <IP_ИЛИ_ДОМЕН> -Port 8443
 
 ## Структура репозитория
 
-    ci-cd-deploy/
+    jenkins-on-server/
     │
     ├── bootstrap.sh
     ├── tune-low-memory.sh
@@ -152,8 +152,8 @@ HTTP → HTTPS добавляет Certbot во время `bootstrap.sh` ком�
 ```bash
 sudo apt-get update -y
 sudo apt-get install -y git
-git clone https://github.com/<you>/ci-cd-deploy.git
-cd ci-cd-deploy
+git clone https://github.com/golosoman-labs/jenkins-on-server.git
+cd jenkins-on-server
 sudo bash bootstrap.sh -d ci.example.com -e admin@example.com
 ```
 
