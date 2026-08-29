@@ -128,9 +128,11 @@ server {
     location / {
         proxy_pass http://127.0.0.1:18080;
 
-        proxy_set_header Host $host;
+        proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Port $server_port;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
@@ -141,7 +143,9 @@ HTTP → HTTPS добавляет Certbot во время `bootstrap.sh` ком�
 `certbot --nginx --https-port 8443 --redirect`. Публичный HTTPS вынесен на
 **8443**, потому что `443` занят другим сайтом; upstream всегда `http://127.0.0.1:18080`.
 
-`X-Forwarded-Proto` обязателен при работе через HTTPS-прокси.
+`$http_host` и `X-Forwarded-Port` сохраняют нестандартный публичный порт в
+ссылках и redirect Jenkins. `X-Forwarded-Proto` обязателен при работе через
+HTTPS-прокси.
 
 ---
 
